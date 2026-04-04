@@ -58,8 +58,7 @@ app.post('/cadastrar', (req, res) => {
 // Login
 app.post('/login', (req, res) => {
   const { email, senha } = req.body;
-  const query = "SELECT id, nome, email, endereco, cep FROM estoque.clientes WHERE email = ? AND senha = ?";
-  
+  const query = "SELECT id AS id_cliente, nome, email, endereco, cep FROM estoque.clientes WHERE email = ? AND senha = ?";
   db.query(query, [email, senha], (err, result) => {
     if (err) return res.status(500).json({ message: err.message });
     if (result.length > 0) {
@@ -110,5 +109,25 @@ app.post('/venda_cliente', (req, res) => {
     });
   });
 });
+// --- NOVA ROTA: HISTÓRICO DE PEDIDOS ---
+app.get('/historico/:id_cliente', (req, res) => {
+  const { id_cliente } = req.params;
+
+  // IMPORTANTE: Use "cadastro", que é o nome da coluna na sua VIEW
+  const query = "SELECT * FROM estoque.historico_pedidos WHERE cadastro = ?";
+
+  db.query(query, [id_cliente], (err, results) => {
+    if (err) {
+      console.error("Erro na consulta:", err);
+      return res.status(500).json([]);
+    }
+    
+    // Filtro de segurança: Remove a linha "vazia" que a VIEW cria caso o cliente não tenha pedidos reais
+    const pedidosReais = results.filter(p => p.numero_pedido !== 'Você não possui pedidos!');
+    
+    res.json(pedidosReais);
+  });
+});x
+
 
 app.listen(PORT, () => console.log(`🚀 Server on: http://localhost:${PORT}`));

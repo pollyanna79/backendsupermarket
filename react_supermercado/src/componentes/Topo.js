@@ -36,13 +36,10 @@ function Topo({ totalItens, abrirCarrinho, verHistorico, carregandoHistorico, us
           🛒 <span className="badge">Carrinho</span>
           <span> ({totalItens})</span>
         </button>
+        <button className="btn-historico" onClick={verHistorico} style={{cursor: 'pointer'}}>
+  {usuarioLogado ? `Olá, 👤${usuarioLogado.nome} (Pedidos)` : "📋 Meus Pedidos"}
+</button>
 
-        {/* Botão de Histórico - Só aparece se o usuário estiver logado */}
-        {usuarioLogado && (
-          <button className="btn-historico" onClick={verHistorico} style={{cursor: 'pointer'}}>
-            {carregandoHistorico ? "⌛..." : "📋 Meus Pedidos"}
-          </button>
-        )}
       </div>
     </header>
   );

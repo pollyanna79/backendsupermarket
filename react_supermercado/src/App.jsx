@@ -11,6 +11,8 @@ function App() {
   const [usuario, setUsuario] = useState(null);
   const [formaPagamento, setFormaPagamento] = useState('');
   const [pedidoFinalizado, setPedidoFinalizado] = useState(null);
+  const [historico, setHistorico] = useState([]);
+  const [origemLogin, setOrigemLogin] = useState('checkout');
   const [formData, setFormData] = useState({ nome: '', email: '', senha: '', telefone: '', cep: '', endereco: '', cpf: '' });
 
   useEffect(() => {
@@ -52,8 +54,6 @@ function App() {
 // --- MÉTODOS DE AUTENTICAÇÃO E FINALIZAÇÃO ---
 const handleAuth = async () => {
   const rota = modoCadastro ? 'cadastrar' : 'login';
-  console.log(`Tentando ${rota} com:`, formData); // VEJA SE ISSO APARECE NO F12
-
   try {
     const response = await fetch(`http://localhost:3001/${rota}`, {
       method: "POST",
@@ -63,22 +63,28 @@ const handleAuth = async () => {
 
     const dados = await response.json();
 
-if (response.ok) {
-      console.log("Sucesso! Dados recebidos:", dados);
-      
-      // IMPORTANTE: Verifique se o seu Back-end retorna 'id' ou 'id_cliente'
+    if (response.ok) {
       setUsuario(dados); 
       
-      // MUDA PARA A TELA DE PAGAMENTO
-      setEtapa('checkout'); 
+      // AQUI ESTÁ O SEGREDO:
+      if (origemLogin === 'historico') {
+        const idParaBusca = dados.id_cliente || dados.id;
+        // Se ele veio pelo botão de histórico, busca os dados da VIEW
+        const resH = await fetch(`http://localhost:3001/historico/${idParaBusca}`);
+        const dadosH = await resH.json();
+        setHistorico(Array.isArray(dadosH) ? dadosH : []);
+        setEtapa('historico');
+      } else {
+        setEtapa('checkout');
+      }
     } else {
       alert(dados.message || "Erro na autenticação");
     }
   } catch (err) {
-    console.error("Erro na conexão com o servidor:", err);
-    alert("Servidor desligado ou erro de rede.");
+    alert("Erro de conexão.");
   }
 };
+     
 const finalizar = async () => {
   // 1. Verificação de segurança
   if (!usuario || !usuario.id) {
@@ -123,11 +129,42 @@ const finalizar = async () => {
     alert("❌ Falha no Pedido: " + err.message);
     }
   };
+const carregarHistorico = async () => {
+  if (!usuario) {
+    setOrigemLogin('historico');
+    setEtapa('login');
+    return;
+  }
+
+  // Garante que temos um ID válido antes de fazer o fetch
+  const idParaBusca = usuario.id_cliente || usuario.id;
+  console.log("Buscando histórico para o ID:", idParaBusca);
+  try {
+    const response = await fetch(`http://localhost:3001/historico/${idParaBusca}`);
+    const dados = await response.json();
+
+   if (Array.isArray(dados)) {
+      setHistorico(dados);
+      setEtapa('historico');
+    } else {
+      setHistorico([]);
+      alert("Nenhum dado de histórico encontrado.");
+    }
+
+  } catch (err) {
+    console.error("Erro no fetch do histórico:", err);
+    alert("Erro ao buscar histórico.");
+  }
+};
   
   return (
     <div className="App">
-      <Topo totalItens={carrinho.length} abrirCarrinho={() => setEtapa('carrinho')} temPedido={!!pedidoFinalizado} />
-      
+<Topo 
+      totalItens={carrinho.length} 
+      abrirCarrinho={() => setEtapa('carrinho')} 
+      verHistorico={carregarHistorico} 
+      usuarioLogado={usuario} 
+    /> 
       <main className="conteudo-principal">
         {etapa === 'vitrine' && (
           <div className="grid-produtos">
@@ -251,6 +288,36 @@ const finalizar = async () => {
             <button className="btn-p" onClick={() => setEtapa('vitrine')}>Voltar</button>
           </div>
         )}
+        {etapa === 'historico' && (
+  <div className="container-venda">
+    <h2>📋 Meu Histórico de Pedidos</h2>
+    {historico.length === 0 ? <p>Você ainda não realizou pedidos.</p> : (
+      <table className="tabela-historico">
+        <thead>
+          <tr>
+            <th>Pedido</th>
+            <th>Produto</th>
+            <th>Data da Venda</th>
+            <th>Qtd</th>
+            <th>Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+        {Array.isArray(historico) && historico.map((ped, index) => (
+  <tr key={index}>
+    <td>#{ped.numero_pedido}</td> 
+    <td>{ped.itens_do_pedido}</td>
+    <td>{ped.data_venda}</td> {/* Adicionei a data, já que sua VIEW tem */}
+    <td>{ped.quantidades}</td>
+    <td>R$ {parseFloat(ped.valor_total_pedido).toFixed(2)}</td>
+  </tr>
+))}
+        </tbody>
+      </table>
+    )}
+    <button className="btn-p" onClick={() => setEtapa('vitrine')}>Voltar para Loja</button>
+  </div>
+)}
       </main>
       <Rodape />
     </div>

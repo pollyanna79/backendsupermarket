@@ -356,3 +356,13 @@ body {
   cursor: pointer;
   margin: 10px;
 }
+.tabela-historico {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+.tabela-historico th, .tabela-historico td {
+  border-bottom: 1px solid #ddd;
+  padding: 10px;
+  text-align: left;
+}
