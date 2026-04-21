@@ -14,8 +14,10 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
-
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
 
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
@@ -32,7 +34,7 @@ db.connect((err) => {
 // --- ROTAS ---
 
 app.get('/produtos', (req, res) => {
-  db.query('SELECT * FROM estoque.produtos', (err, results) => {
+  db.query('SELECT * FROM produtos', (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });
@@ -40,7 +42,7 @@ app.get('/produtos', (req, res) => {
 
 app.post('/cadastrar', (req, res) => {
   const { nome, email, senha, telefone, cep, endereco, cpf } = req.body;
-  const query = "INSERT INTO estoque.clientes (nome, email, senha, telefone, cep, endereco, cpf) VALUES (?, ?, ?, ?, ?, ?, ?)";
+  const query = "INSERT INTO clientes (nome, email, senha, telefone, cep, endereco, cpf) VALUES (?, ?, ?, ?, ?, ?, ?)";
   const valores = [nome, email, senha, telefone, cep, endereco, cpf?.replace(/\D/g, '')];
   db.query(query, valores, (err, result) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -67,7 +69,7 @@ app.post('/login', (req, res) => {
       endereco, 
       cpf, 
       email 
-    FROM estoque.clientes 
+    FROM clientes 
     WHERE email = ? AND senha = ?
   `;
 
@@ -97,7 +99,7 @@ app.post('/venda_cliente', (req, res) => {
 
   const obterProximoPedido = () => {
     return new Promise((resolve, reject) => {
-      db.query('SELECT IFNULL(MAX(id_pedido), 0) + 1 AS proximo FROM estoque.venda_cliente', (err, results) => {
+      db.query('SELECT IFNULL(MAX(id_pedido), 0) + 1 AS proximo FROM venda_cliente', (err, results) => {
         if (err) reject(err);
         else resolve(results[0].proximo);
       });
@@ -119,14 +121,14 @@ app.post('/venda_cliente', (req, res) => {
     ]);
 
     // Ajuste a query abaixo incluindo o nome da coluna de imagem que existe no seu banco
-    const queryVenda = "INSERT INTO estoque.venda_cliente (id, id_pedido, id_cliente, produto, quantidade, valor, data_venda, id_produto, foto_produto) VALUES ?";
+    const queryVenda = "INSERT INTO venda_cliente (id, id_pedido, id_cliente, produto, quantidade, valor, data_venda, id_produto, foto_produto) VALUES ?";
 
     db.query(queryVenda, [valores], (err) => {
       if (err) return res.status(500).json({ error: err.message });
       
    // Atualização de estoque simplificada para não travar a resposta
     itens.forEach(item => {
-      db.query('UPDATE estoque.produtos SET estoque = estoque - ? WHERE id = ?', [item.quantidade, item.id_produto]);
+      db.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?', [item.quantidade, item.id_produto]);
     });
 
     res.status(200).json({ success: true, id_pedido: pedidoId });
@@ -137,7 +139,7 @@ app.post('/venda_cliente', (req, res) => {
 });
 
 app.get('/historico/:id_cliente', (req, res) => {
-  const query = "SELECT * FROM estoque.historico_pedidos WHERE cadastro = ?";
+  const query = "SELECT * FROM historico_pedidos WHERE cadastro = ?";
   db.query(query, [req.params.id_cliente], (err, results) => {
     if (err) return res.status(500).json([]);
     res.json(results.filter(p => p.numero_pedido !== 'Você não possui pedidos!'));
