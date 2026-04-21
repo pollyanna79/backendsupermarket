@@ -6,12 +6,17 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-app.use(cors());
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000', // Aceita o site oficial do meu computador
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const PORT = 3001;
 
-// Conexão com o Banco de Dados
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -20,16 +25,12 @@ const db = mysql.createConnection({
 });
 
 db.connect((err) => {
-  if (err) {
-    console.error('❌ ERRO AO CONECTAR NO MYSQL:', err.message);
-  } else {
-    console.log('✅ BANCO CONECTADO COM SUCESSO!');
-  }
+  if (err) console.error('❌ ERRO MYSQL:', err.message);
+  else console.log('✅ BANCO CONECTADO!');
 });
 
 // --- ROTAS ---
 
-// Vitrine de Produtos
 app.get('/produtos', (req, res) => {
   db.query('SELECT * FROM estoque.produtos', (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -37,97 +38,547 @@ app.get('/produtos', (req, res) => {
   });
 });
 
-// Cadastro de Clientes (CORRIGIDO)
 app.post('/cadastrar', (req, res) => {
   const { nome, email, senha, telefone, cep, endereco, cpf } = req.body;
-  
   const query = "INSERT INTO estoque.clientes (nome, email, senha, telefone, cep, endereco, cpf) VALUES (?, ?, ?, ?, ?, ?, ?)";
-  const cpfLimpo = cpf ? cpf.replace(/\D/g, '') : '';
-  const valores = [nome, email, senha, telefone, cep, endereco, cpfLimpo];
-
+  const valores = [nome, email, senha, telefone, cep, endereco, cpf?.replace(/\D/g, '')];
   db.query(query, valores, (err, result) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.status(200).json({ 
-      id: result.insertId, 
-      nome, 
-      email 
-    });
+    res.status(200).json({ id: result.insertId, nome, email });
   });
 });
 
-// Login
+// Login Ajustado
 app.post('/login', (req, res) => {
   const { email, senha } = req.body;
-  const query = "SELECT id AS id_cliente, nome, email, endereco, cep FROM estoque.clientes WHERE email = ? AND senha = ?";
+
+  // 1. Verificação básica para evitar processamento inútil
+  if (!email || !senha) {
+    return res.status(400).json({ message: "E-mail e senha são obrigatórios." });
+  }
+
+  // 2. Query selecionando todos os dados que você quer levar para o Frontend
+  const query = `
+    SELECT 
+      id AS id_cliente, 
+      nome, 
+      telefone, 
+      cep, 
+      endereco, 
+      cpf, 
+      email 
+    FROM estoque.clientes 
+    WHERE email = ? AND senha = ?
+  `;
+
   db.query(query, [email, senha], (err, result) => {
-    if (err) return res.status(500).json({ message: err.message });
+    if (err) {
+      console.error("❌ Erro no Login:", err.message);
+      return res.status(500).json({ message: "Erro interno no servidor." });
+    }
+
     if (result.length > 0) {
+      // Login com sucesso: Retornamos os dados do usuário (menos a senha por segurança)
+      console.log(`✅ Usuário ${result[0].nome} logado.`);
       res.status(200).json(result[0]);
     } else {
+      // Erro de credenciais
       res.status(401).json({ message: "E-mail ou senha incorretos" });
     }
   });
 });
 
-// Rota de Vendas (FINALMENTE CORRIGIDA)
+// Rota de Vendas (CORRIGIDA)
 app.post('/venda_cliente', (req, res) => {
-  console.log("-----------------------------------------");
-    console.log("🚨 O BOTAO FOI CLICADO E O DADO CHEGOU!");
-    console.log("-----------------------------------------");
-  const { id_pedido, id_cliente, produto, quantidade, valor, id_produto } = req.body;
+  const { id_pedido, id_cliente, itens } = req.body;
+  console.log("RECEBI NO BACKEND:", itens[0]);
 
-  // LOG DE CONTROLE: Veja se esses valores aparecem no terminal do VS Code
-  console.log("--- TENTATIVA DE VENDA ---");
-  console.log("Pedido:", id_pedido, "| Cliente:", id_cliente, "| Produto ID:", id_produto);
-  const queryVenda = `
-    INSERT INTO estoque.venda_cliente (id_pedido, id_cliente, produto, quantidade, valor, data_venda, id_produto) 
-    VALUES (?, ?, ?, ?, ?, NOW(), ?)
-  `;
+  if (!id_cliente || !itens) return res.status(400).send("Dados incompletos");
 
-  // Array de valores seguindo exatamente a ordem das interrogações (?) acima
-  const valoresVenda = [
-    id_pedido,    // 1º ?
-    Number(id_cliente),
-    produto,      // 3º ?
-    quantidade,   // 4º ?
-    valor,        // 5º ?
-    id_produto    // 6º ? (Referente à coluna id_produto no final)
-  ];
-
-  db.query(queryVenda, valoresVenda, (err, result) => {
-    if (err) {
-      // ESTA LINHA É A MAIS IMPORTANTE: Ela vai imprimir o erro real no terminal
-      console.error("❌ ERRO CRÍTICO NO BANCO:", err.code, "-", err.message);
-      return res.status(500).json({ error: err.message, codigo: err.code });
-    }
-
-    // Se chegou aqui, a venda gravou. Agora tenta o estoque.
-    const queryEstoque = "UPDATE estoque.produtos SET estoque = estoque - ? WHERE id = ?";
-    db.query(queryEstoque, [quantidade, id_produto], (errE) => {
-      if (errE) console.error("⚠️ Erro no estoque:", errE.message);
-      res.status(200).json({ message: "Sucesso!" });
+  const obterProximoPedido = () => {
+    return new Promise((resolve, reject) => {
+      db.query('SELECT IFNULL(MAX(id_pedido), 0) + 1 AS proximo FROM estoque.venda_cliente', (err, results) => {
+        if (err) reject(err);
+        else resolve(results[0].proximo);
+      });
     });
+  };
+
+  const gravarVenda = (pedidoId) => {
+    // Adicionando item.imagem_url na gravação
+    const valores = itens.map(item => [
+      null, 
+      pedidoId, 
+      Number(id_cliente), 
+      item.produto, 
+      item.quantidade, 
+      item.valor, 
+      new Date(), 
+      item.id_produto,
+      item.imagem_url 
+    ]);
+
+    // Ajuste a query abaixo incluindo o nome da coluna de imagem que existe no seu banco
+    const queryVenda = "INSERT INTO estoque.venda_cliente (id, id_pedido, id_cliente, produto, quantidade, valor, data_venda, id_produto, foto_produto) VALUES ?";
+
+    db.query(queryVenda, [valores], (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      
+   // Atualização de estoque simplificada para não travar a resposta
+    itens.forEach(item => {
+      db.query('UPDATE estoque.produtos SET estoque = estoque - ? WHERE id = ?', [item.quantidade, item.id_produto]);
+    });
+
+    res.status(200).json({ success: true, id_pedido: pedidoId });
+  });
+  };
+
+  obterProximoPedido().then(gravarVenda).catch(e => res.status(500).send(e.message));
+});
+
+app.get('/historico/:id_cliente', (req, res) => {
+  const query = "SELECT * FROM estoque.historico_pedidos WHERE cadastro = ?";
+  db.query(query, [req.params.id_cliente], (err, results) => {
+    if (err) return res.status(500).json([]);
+    res.json(results.filter(p => p.numero_pedido !== 'Você não possui pedidos!'));
   });
 });
-// --- NOVA ROTA: HISTÓRICO DE PEDIDOS ---
-app.get('/historico/:id_cliente', (req, res) => {
-  const { id_cliente } = req.params;
 
-  // IMPORTANTE: Use "cadastro", que é o nome da coluna na sua VIEW
-  const query = "SELECT * FROM estoque.historico_pedidos WHERE cadastro = ?";
-
-  db.query(query, [id_cliente], (err, results) => {
-    if (err) {
-      console.error("Erro na consulta:", err);
-      return res.status(500).json([]);
-    }
-    
-    // Filtro de segurança: Remove a linha "vazia" que a VIEW cria caso o cliente não tenha pedidos reais
-    const pedidosReais = results.filter(p => p.numero_pedido !== 'Você não possui pedidos!');
-    
-    res.json(pedidosReais);
-  });
-});x
-
+app.get('/api/promocao_10', (req, res) => {
+    db.query("SELECT * FROM promocao_10", (err, results) => {
+        if (err) return res.status(500).json(err);
+        res.json(results);
+    });
+});
 
 app.listen(PORT, () => console.log(`🚀 Server on: http://localhost:${PORT}`));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
