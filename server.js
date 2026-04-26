@@ -7,7 +7,7 @@ dotenv.config();
 
 const app = express();
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'https://seu-projeto-react.vercel.app', 
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000', 
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 };
@@ -24,11 +24,12 @@ const db = mysql.createPool({
   user: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
-  port: process.env.DB_PORT || 4000, // O TiDB usa a porta 4000 por padrão
+  // Adicionei a porta 4000 que é a do TiDB
+  port: process.env.DB_PORT || 4000, 
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  // ESTA É A PARTE QUE VOCÊ DEVE ADICIONAR:
+  // OBRIGATÓRIO para o TiDB Cloud:
   ssl: {
     minVersion: 'TLSv1.2',
     rejectUnauthorized: true
