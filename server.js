@@ -7,7 +7,7 @@ dotenv.config();
 
 const app = express();
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000', // Aceita o site oficial do meu computador
+  origin: process.env.FRONTEND_URL || 'https://seu-projeto-react.vercel.app', 
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 };
@@ -153,7 +153,6 @@ app.get('/api/promocao_10', (req, res) => {
     });
 });
 
-app.listen(PORT, () => console.log(`🚀 Server on: http://localhost:${PORT}`));
 
 
 
