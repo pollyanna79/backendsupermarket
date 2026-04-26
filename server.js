@@ -24,9 +24,15 @@ const db = mysql.createPool({
   user: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
+  port: process.env.DB_PORT || 4000, // O TiDB usa a porta 4000 por padrão
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  // ESTA É A PARTE QUE VOCÊ DEVE ADICIONAR:
+  ssl: {
+    minVersion: 'TLSv1.2',
+    rejectUnauthorized: true
+  }
 });
 
 db.getConnection((err, connection) => {
