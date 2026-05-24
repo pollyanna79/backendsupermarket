@@ -14,33 +14,31 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
-const PORT = process.env.PORT || 3001;
+
+// A Clever Cloud define automaticamente a porta correta na variável process.env.PORT
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
 
+// Configuração adaptada com as variáveis automáticas da Clever Cloud
 const db = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-  // Adicionei a porta 4000 que é a do TiDB
-  port: process.env.DB_PORT || 4000, 
+  host: process.env.MYSQL_ADDON_HOST,
+  user: process.env.MYSQL_ADDON_USER,
+  password: process.env.MYSQL_ADDON_PASSWORD,
+  database: process.env.MYSQL_ADDON_DB,
+  port: process.env.MYSQL_ADDON_PORT || 3306, 
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0,
-  // OBRIGATÓRIO para o TiDB Cloud:
-  ssl: {
-    minVersion: 'TLSv1.2',
-    rejectUnauthorized: true
-  }
+  queueLimit: 0
+  // Removido o bloco SSL obrigatório do TiDB antigo para evitar conflitos no MySQL da Clever Cloud
 });
 
 db.getConnection((err, connection) => {
   if (err) {
     console.error('❌ ERRO AO OBTER CONEXÃO DO POOL:', err.message);
   } else {
-    console.log('✅ CONECTADO AO MYSQL VIA POOL!');
+    console.log('✅ CONECTADO AO MYSQL DA CLEVER CLOUD VIA POOL!');
     connection.release(); // Libera a conexão de volta para o pool
   }
 });
@@ -104,7 +102,7 @@ app.post('/login', (req, res) => {
   });
 });
 
-// Rota de Vendas (CORRIGIDA)
+// Rota de Vendas
 app.post('/venda_cliente', (req, res) => {
   const { id_pedido, id_cliente, itens } = req.body;
   console.log("RECEBI NO BACKEND:", itens[0]);
@@ -121,7 +119,6 @@ app.post('/venda_cliente', (req, res) => {
   };
 
   const gravarVenda = (pedidoId) => {
-    // Adicionando item.imagem_url na gravação
     const valores = itens.map(item => [
       null, 
       pedidoId, 
@@ -134,19 +131,18 @@ app.post('/venda_cliente', (req, res) => {
       item.imagem_url 
     ]);
 
-    // Ajuste a query abaixo incluindo o nome da coluna de imagem que existe no seu banco
     const queryVenda = "INSERT INTO venda_cliente (id, id_pedido, id_cliente, produto, quantidade, valor, data_venda, id_produto, foto_produto) VALUES ?";
 
     db.query(queryVenda, [valores], (err) => {
       if (err) return res.status(500).json({ error: err.message });
       
-   // Atualização de estoque simplificada para não travar a resposta
-    itens.forEach(item => {
-      db.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?', [item.quantidade, item.id_produto]);
-    });
+      // Atualização de estoque
+      itens.forEach(item => {
+        db.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?', [item.quantidade, item.id_produto]);
+      });
 
-    res.status(200).json({ success: true, id_pedido: pedidoId });
-  });
+      res.status(200).json({ success: true, id_pedido: pedidoId });
+    });
   };
 
   obterProximoPedido().then(gravarVenda).catch(e => res.status(500).send(e.message));
@@ -166,7 +162,6 @@ app.get('/api/promocao_10', (req, res) => {
         res.json(results);
     });
 });
-
 
 
 
