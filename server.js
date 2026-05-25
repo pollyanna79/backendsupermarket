@@ -6,8 +6,23 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173', // Caso use Vite localmente
+  'https://backendsupermarket-imx5af751-pollyannasanto.vercel.app', // Sua URL atual da Vercel
+  process.env.FRONTEND_URL // Mantém a variável de ambiente se você configurar no painel
+];
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000', 
+  origin: function (origin, callback) {
+    // Permite requisições sem origem (como aplicativos mobile, Postman ou a própria API testando local)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Bloqueado pelo CORS: Esta origem não é permitida.'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 };
