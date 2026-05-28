@@ -9,8 +9,9 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173', // Caso use Vite localmente
-  'https://backendsupermarket-imx5af751-pollyannasanto.vercel.app', // Sua URL atual da Vercel
-  process.env.FRONTEND_URL // Mantém a variável de ambiente se você configurar no painel
+  'https://backendsupermarket.vercel.app', // URL principal de produção
+  'https://backendsupermarket-imx5af751-pollyannasanto.vercel.app', // URL de deploy específico
+  process.env.FRONTEND_URL // Mantém a variável de ambiente se configurada
 ];
 const corsOptions = {
   origin: function (origin, callback) {
