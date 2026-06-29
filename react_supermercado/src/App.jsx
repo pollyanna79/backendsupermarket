@@ -404,11 +404,11 @@ const rota = modoCadastro ? 'cadastrar' : 'login';
                           </div>
                           <div>
                             <span className="texto-label-promocao">Por: </span>
-                            <span className="preco-novo">R$ {parseFloat(precoPromocional).toFixed(3)}</span>
+                            <span className="preco-novo">R$ {parseFloat(precoPromocional).toFixed(2)}</span>
                           </div>
                         </div>
                       ) : (
-                        <span className="preco-normal">R$ {parseFloat(p.valor || 0).toFixed(3)}</span>
+                        <span className="preco-normal">R$ {parseFloat(p.valor || 0).toFixed(2)}</span>
                       )}
                     </div>
 
