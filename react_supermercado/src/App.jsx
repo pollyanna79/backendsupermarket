@@ -163,17 +163,16 @@ function App() {
   const valorTotalFinal = totalProd + valorFrete;
 
   const precoAntigoProduto = (produto) => {
-    return parseFloat(
-      produto.Valor_antigo ||
-      produto.valor_antigo ||
-      produto.preco_antigo ||
-      produto.precoAntigo ||
-      produto.valor ||
-      produto.preco ||
-      0
-    );
-  };
-
+    const campos = [
+    'Valor_antigo', 'valor_antigo', 'preco_antigo', 'precoAntigo'
+  ];
+    for (const campo of campos) {
+    if (produto[campo] !== undefined && produto[campo] !== null && produto[campo] !== 0 && produto[campo] !== '') {
+      return parseFloat(produto[campo]);
+    }
+  }
+  return null; // Retorna null se não houver valor antigo, para não exibir na tela
+};
   // --- MÉTODOS DE AUTENTICAÇÃO E HISTÓRICO ---
 const handleAuth = async () => {
     // --- NOVAS VALIDAÇÕES ---
@@ -390,7 +389,7 @@ const rota = modoCadastro ? 'cadastrar' : 'login';
               {produtos.map((p) => {
                 const precoPromocional = obterPrecoPromocional(p);
                 const temOferta = precoPromocional !== null && precoPromocional !== undefined && precoPromocional !== '' && p.secao !== 'DPH';
-                const precoAntigo = parseFloat(p.valor || p.preco || p.Valor_antigo || 0).toFixed(2);
+                const precoAntigo = precoAntigoProduto(p);
                 return (
                   <div key={p.id} className="card">
                     <img src={p.imagem_url || p.foto} alt={p.produto} />
