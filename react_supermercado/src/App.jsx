@@ -404,11 +404,11 @@ const rota = modoCadastro ? 'cadastrar' : 'login';
                           </div>
                           <div>
                             <span className="texto-label-promocao">Por: </span>
-                            <span className="preco-novo">R$ {parseFloat(precoPromocional).toFixed(2)}</span>
+                            <span className="preco-novo">R$ {parseFloat(precoPromocional).toFixed(3)}</span>
                           </div>
                         </div>
                       ) : (
-                        <span className="preco-normal">R$ {parseFloat(p.valor || 0).toFixed(2)}</span>
+                        <span className="preco-normal">R$ {parseFloat(p.valor || 0).toFixed(3)}</span>
                       )}
                     </div>
 
@@ -448,7 +448,7 @@ const rota = modoCadastro ? 'cadastrar' : 'login';
               </div>
               <div className="carrinho-item-valores">
                 <span className="preco-novo">R$ {precoAtual}</span>
-                <span style={{ fontSize: '0.85rem' }}>Total: R$ {subtotal}</span>
+               
                 <button className="btn-p" onClick={() => removerDoCarrinho(item.id)}>Remover</button>
               </div>
             </div>
