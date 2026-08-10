@@ -378,7 +378,7 @@ display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
-  flex-shrink: 0;  /* Evita que essa coluna encolha ou vaze */
+  flex-shrink: 0;  /* Evita que essa coluna encolha ou vaze **/
 }
 /* Estilo dedicado para o botão de remover dentro do carrinho, impedindo que ele puxe o width: 100% do .btn-p geral */
 .carrinho-item-valores .btn-p {
