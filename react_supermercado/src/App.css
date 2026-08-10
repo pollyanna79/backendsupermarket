@@ -350,11 +350,13 @@ display: flex;
 
 .item-carrinho-detalhado {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  padding: 16px;
+  padding: 12px 0;
   border-bottom: 1px solid #eee;
-  gap: 16px;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .img-mini { width: 80px; height: 80px; object-fit: contain; border-radius: 10px; background: #f9f9f9; }
@@ -366,22 +368,25 @@ display: flex;
 
 .carrinho-item-info strong {
   display: block;
-  margin-bottom: 6px;
+ font-size: 0.95rem;
+  color: #333;
+  word-break: break-word;
 }
 
 .carrinho-item-valores {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 8px;
-  min-width: 140px;
+  gap: 6px;
+  flex-shrink: 0;  /* Evita que essa coluna encolha ou vaze */
 }
 /* Estilo dedicado para o botão de remover dentro do carrinho, impedindo que ele puxe o width: 100% do .btn-p geral */
 .carrinho-item-valores .btn-p {
-  width: auto;             /* Faz o botão ocupar apenas o espaço do texto */
+  width: auto !important;            /* Faz o botão ocupar apenas o espaço do texto */
   padding: 6px 12px;       /* Deixa ele mais compacto */
   font-size: 0.85rem;      /* Reduz levemente a fonte */
-  background-color: #dc3545; /* Um tom de vermelho padrão para exclusão */
+  background-color: #34a811; /* Um tom de vermelho padrão para exclusão */
+  border-radius: 4px;
   transition: background 0.2s;
 }
 .carrinho-item-valores .btn-p:hover {
