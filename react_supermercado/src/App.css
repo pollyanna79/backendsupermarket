@@ -373,8 +373,19 @@ display: flex;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: 8px;
   min-width: 140px;
+}
+/* Estilo dedicado para o botão de remover dentro do carrinho, impedindo que ele puxe o width: 100% do .btn-p geral */
+.carrinho-item-valores .btn-p {
+  width: auto;             /* Faz o botão ocupar apenas o espaço do texto */
+  padding: 6px 12px;       /* Deixa ele mais compacto */
+  font-size: 0.85rem;      /* Reduz levemente a fonte */
+  background-color: #dc3545; /* Um tom de vermelho padrão para exclusão */
+  transition: background 0.2s;
+}
+.carrinho-item-valores .btn-p:hover {
+  background-color: #bd2130;
 }
 
 .carrinho-item-valores span {
